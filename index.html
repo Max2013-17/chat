@@ -2,86 +2,83 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🌐 МегаЧат — общение на любом расстоянии</title>
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg: #0f0c29;
+            --bg2: #302b63;
+            --bg3: #24243e;
+            --accent: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            --glass: rgba(255, 255, 255, 0.05);
+            --border: rgba(255, 255, 255, 0.1);
+            --text: #fff;
+            --text-sec: rgba(255,255,255,0.5);
         }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg), var(--bg2), var(--bg3));
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            color: var(--text);
+            padding: 10px;
         }
 
         .container {
             width: 100%;
             max-width: 500px;
             height: 95vh;
+            max-height: 900px;
             display: flex;
             flex-direction: column;
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--glass);
             backdrop-filter: blur(20px);
             border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
             overflow: hidden;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
-        /* ===== Экран входа ===== */
+        /* ===== ЭКРАН ВХОДА ===== */
         .login-screen {
             flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 40px 30px;
-            gap: 20px;
+            padding: 30px 24px;
+            gap: 16px;
+            overflow-y: auto;
         }
 
         .login-screen h1 {
             font-size: 2em;
             text-align: center;
-            background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+            background: var(--accent);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
-        .login-screen p {
-            color: rgba(255,255,255,0.5);
-            text-align: center;
-            font-size: 0.9em;
-            line-height: 1.5;
-        }
+        .login-screen p { color: var(--text-sec); text-align: center; font-size: 0.9em; line-height: 1.5; }
 
         .login-screen input {
             width: 100%;
             padding: 14px 18px;
             border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid var(--border);
             background: rgba(255,255,255,0.08);
             color: #fff;
             font-size: 1em;
             outline: none;
-            transition: border 0.3s;
+            transition: 0.3s;
         }
-
-        .login-screen input:focus {
-            border-color: #7b2ff7;
-        }
-
-        .login-screen input::placeholder {
-            color: rgba(255,255,255,0.35);
-        }
+        .login-screen input:focus { border-color: #7b2ff7; }
+        .login-screen input::placeholder { color: rgba(255,255,255,0.35); }
 
         .btn {
             width: 100%;
@@ -91,495 +88,421 @@
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.3s;
+            transition: 0.2s;
         }
-
-        .btn:active {
-            transform: scale(0.97);
-        }
-
+        .btn:active { transform: scale(0.97); }
         .btn-primary {
-            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            background: var(--accent);
             color: #fff;
             box-shadow: 0 4px 20px rgba(123, 47, 247, 0.4);
         }
+        .btn-primary:hover { box-shadow: 0 6px 30px rgba(123, 47, 247, 0.6); }
 
-        .btn-primary:hover {
-            box-shadow: 0 6px 30px rgba(123, 47, 247, 0.6);
+        .btn-row { width: 100%; display: flex; gap: 10px; margin-top: 4px; }
+        .btn-lobby {
+            width: 50px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4em; border: 1px solid var(--border);
         }
+        .btn-lobby:hover { background: rgba(255,255,255,0.2); }
 
-        /* ===== Экран чата ===== */
-        .chat-screen {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-        }
+        /* ===== ЭКРАН ЧАТА ===== */
+        .chat-screen { display: none; flex-direction: column; height: 100%; }
 
         .chat-header {
-            padding: 16px 20px;
-            background: rgba(255,255,255,0.05);
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 14px 16px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
         }
-
-        .chat-header .room-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header .room-name {
-            font-weight: 700;
-            font-size: 1.1em;
-        }
-
-        .chat-header .status {
-            font-size: 0.75em;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-top: 3px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #4ade80;
-            animation: pulse 2s infinite;
-        }
-
-        .status-dot.offline {
-            background: #f87171;
-            animation: none;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
+        .room-info { display: flex; flex-direction: column; }
+        .room-name { font-weight: 700; font-size: 1.05em; }
+        .status { font-size: 0.7em; display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; animation: pulse 2s infinite; }
+        .status-dot.offline { background: #f87171; animation: none; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
         .btn-leave {
-            background: rgba(248, 113, 113, 0.2);
-            color: #f87171;
-            border: 1px solid rgba(248, 113, 113, 0.3);
-            padding: 8px 14px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 0.8em;
-            font-weight: 600;
-            transition: background 0.3s;
-        }
-
-        .btn-leave:hover {
-            background: rgba(248, 113, 113, 0.35);
+            background: rgba(248,113,113,0.15); color: #f87171;
+            border: 1px solid rgba(248,113,113,0.3); padding: 6px 12px;
+            border-radius: 8px; cursor: pointer; font-size: 0.75em; font-weight: 600;
         }
 
         /* Сообщения */
         .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            scroll-behavior: smooth; overscroll-behavior: contain;
         }
-
-        .messages::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .messages::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.15);
-            border-radius: 4px;
-        }
-
         .message {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 16px;
-            animation: fadeIn 0.3s ease;
-            line-height: 1.45;
-            word-wrap: break-word;
+            max-width: 85%; padding: 10px 12px; border-radius: 16px;
+            animation: fadeIn 0.3s ease; line-height: 1.4; position: relative;
+        }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .message.mine { align-self: flex-end; background: linear-gradient(135deg, #7b2ff7, #5b1fd4); border-bottom-right-radius: 4px; }
+        .message.other { align-self: flex-start; background: rgba(255,255,255,0.12); border-bottom-left-radius: 4px; }
+
+        .message .sender { font-size: 0.7em; font-weight: 700; color: #a78bfa; margin-bottom: 3px; }
+        .message.mine .sender { color: #c4b5fd; }
+        .message .text { font-size: 0.95em; word-break: break-word; }
+        .message .time { font-size: 0.6em; color: rgba(255,255,255,0.45); margin-top: 4px; text-align: right; }
+        .message.system { align-self: center; background: transparent; color: rgba(255,255,255,0.35); font-size: 0.75em; text-align: center; max-width: 100%; padding: 4px 8px; }
+
+        /* Изображения */
+        .chat-img {
+            max-width: 100%; max-height: 280px; object-fit: contain;
+            border-radius: 10px; cursor: zoom-in; margin-top: 6px;
+            background: rgba(0,0,0,0.2); display: block;
+        }
+        .msg-actions {
+            position: absolute; top: 6px; right: 6px; display: flex; gap: 4px;
+            opacity: 0; transition: 0.2s; pointer-events: none;
+        }
+        .message:hover .msg-actions, .message:active .msg-actions { opacity: 1; pointer-events: auto; }
+        .act-btn {
+            width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.5);
+            color: #fff; border: none; cursor: pointer; font-size: 0.85em;
+            display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .typing-indicator { padding: 6px 16px; font-size: 0.8em; color: rgba(255,255,255,0.5); font-style: italic; min-height: 22px; }
 
-        .message.mine {
-            align-self: flex-end;
-            background: linear-gradient(135deg, #7b2ff7, #5b1fd4);
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.other {
-            align-self: flex-start;
-            background: rgba(255,255,255,0.1);
-            border-bottom-left-radius: 4px;
-        }
-
-        .message .sender {
-            font-size: 0.75em;
-            font-weight: 700;
-            color: #a78bfa;
-            margin-bottom: 3px;
-        }
-
-        .message.mine .sender {
-            color: #c4b5fd;
-        }
-
-        .message .text {
-            font-size: 0.95em;
-        }
-
-        .message .time {
-            font-size: 0.65em;
-            color: rgba(255,255,255,0.4);
-            margin-top: 4px;
-            text-align: right;
-        }
-
-        .message.system {
-            align-self: center;
-            background: transparent;
-            color: rgba(255,255,255,0.35);
-            font-size: 0.8em;
-            text-align: center;
-            max-width: 100%;
-            padding: 4px 10px;
-        }
-
-        /* Поле ввода */
+        /* Ввод */
         .input-area {
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.04);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            gap: 10px;
-            align-items: center;
+            padding: 10px 12px; background: rgba(0,0,0,0.15);
+            border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: center;
         }
-
         .input-area input {
-            flex: 1;
-            padding: 12px 16px;
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.07);
-            color: #fff;
-            font-size: 0.95em;
-            outline: none;
-            transition: border 0.3s;
+            flex: 1; padding: 11px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255,255,255,0.08);
+            color: #fff; font-size: 0.95em; outline: none;
+        }
+        .input-area input:focus { border-color: #7b2ff7; }
+        .input-area input::placeholder { color: rgba(255,255,255,0.3); }
+
+        .btn-send, .btn-file {
+            width: 44px; height: 44px; border-radius: 12px; border: none;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; flex-shrink: 0;
+        }
+        .btn-send { background: var(--accent); color: #fff; font-size: 1.3em; box-shadow: 0 4px 12px rgba(123,47,247,0.3); }
+        .btn-send:active { transform: scale(0.95); }
+        .btn-file { background: rgba(255,255,255,0.15); color: #fff; font-size: 1.2em; border: 1px solid var(--border); }
+        .btn-file:active { transform: scale(0.95); }
+
+        /* Лобби */
+        .lobby-overlay { position: fixed; inset:0; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+        .lobby-container { width: 100%; max-width: 400px; max-height: 80vh; background: rgba(20,20,40,0.95); border-radius: 16px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .lobby-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .lobby-header h2 { font-size: 1.1em; }
+        .lobby-close { background: none; border: none; color: #fff; font-size: 1.3em; cursor: pointer; padding: 5px; }
+        .lobby-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .lobby-item { padding: 12px; margin: 6px 0; background: rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .lobby-item:hover { background: rgba(255,255,255,0.12); }
+        .lobby-empty { text-align: center; color: rgba(255,255,255,0.4); padding: 30px 16px; line-height: 1.5; font-size: 0.9em; }
+
+        /* Лайтбокс */
+        .lightbox { position: fixed; inset:0; background: rgba(0,0,0,0.92); display: none; align-items: center; justify-content: center; z-index: 200; cursor: zoom-out; padding: 20px; }
+        .lightbox img { max-width: 100%; max-height: 90%; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .lightbox-close { position: absolute; top: 20px; right: 20px; color: #fff; font-size: 2em; background: none; border: none; cursor: pointer; padding: 10px; }
+        .lightbox-download {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 30px;
+            border: none; cursor: pointer; font-weight: 600; font-size: 0.9em; display: flex; align-items: center; gap: 8px;
         }
 
-        .input-area input:focus {
-            border-color: #7b2ff7;
-        }
-
-        .input-area input::placeholder {
-            color: rgba(255,255,255,0.3);
-        }
-
-        .btn-send {
-            width: 46px;
-            height: 46px;
-            border-radius: 14px;
-            border: none;
-            background: linear-gradient(135deg, #7b2ff7, #00d2ff);
-            color: #fff;
-            font-size: 1.3em;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(123, 47, 247, 0.3);
-        }
-
-        .btn-send:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-send:active {
-            transform: scale(0.95);
-        }
-
-        /* Адаптивность */
-        @media (max-width: 520px) {
-            body {
-                align-items: stretch;
-            }
-            .container {
-                max-width: 100%;
-                height: 100vh;
-                border-radius: 0;
-            }
+        /* Адаптив */
+        @media (max-width: 480px) {
+            body { padding: 0; align-items: stretch; }
+            .container { max-width: 100%; height: 100vh; border-radius: 0; }
+            .message { max-width: 90%; }
+            .chat-img { max-height: 240px; }
+            .input-area { padding: 8px 10px; }
+            .btn-send, .btn-file { width: 40px; height: 40px; font-size: 1.1em; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-
-    <!-- ЭКРАН ВХОДА -->
+    <!-- ВХОД -->
     <div class="login-screen" id="loginScreen">
         <h1>🌐 МегаЧат</h1>
         <p>Общайтесь с кем угодно<br>из любой точки мира!</p>
-
-        <input type="text" id="nameInput" placeholder="Ваше имя" maxlength="20" autocomplete="off">
-        <input type="text" id="roomInput" placeholder="Название комнаты" maxlength="30" autocomplete="off">
-        <p style="font-size:0.75em; color:rgba(255,255,255,0.3);">
-            💡 Придумайте уникальное название комнаты и поделитесь им с собеседником
-        </p>
-        <button class="btn btn-primary" id="joinBtn">Войти в чат</button>
+        <input type="text" id="nameInput" placeholder="Ваше имя" maxlength="20">
+        <input type="text" id="roomInput" placeholder="Название комнаты" maxlength="30">
+        <input type="password" id="passInput" placeholder="Пароль (пусто = публичный чат)" maxlength="30">
+        <p style="font-size:0.75em; color:rgba(255,255,255,0.3);">🔒 Введите пароль для приватности или оставьте пустым</p>
+        <div class="btn-row">
+            <button class="btn btn-primary" id="joinBtn">Войти в чат</button>
+            <button class="btn btn-lobby" id="lobbyBtn" title="Публичные чаты">🌐</button>
+        </div>
     </div>
 
-    <!-- ЭКРАН ЧАТА -->
+    <!-- ЧАТ -->
     <div class="chat-screen" id="chatScreen">
         <div class="chat-header">
             <div class="room-info">
                 <span class="room-name" id="roomDisplay">Комната</span>
-                <span class="status">
-                    <span class="status-dot" id="statusDot"></span>
-                    <span id="statusText">Подключено</span>
-                </span>
+                <span class="status"><span class="status-dot" id="statusDot"></span><span id="statusText">Подключено</span></span>
             </div>
             <button class="btn-leave" id="leaveBtn">Выйти</button>
         </div>
-
         <div class="messages" id="messages"></div>
-
+        <div class="typing-indicator" id="typingIndicator"></div>
         <div class="input-area">
-            <input type="text" id="msgInput" placeholder="Напишите сообщение..." maxlength="500" autocomplete="off">
+            <input type="text" id="msgInput" placeholder="Сообщение..." maxlength="500" autocomplete="off">
+            <input type="file" id="fileInput" accept="image/*" style="display:none">
+            <button class="btn-file" id="imgBtn">📷</button>
             <button class="btn-send" id="sendBtn">➤</button>
         </div>
     </div>
+</div>
 
+<!-- ЛОББИ -->
+<div class="lobby-overlay" id="lobbyOverlay">
+    <div class="lobby-container">
+        <div class="lobby-header"><h2>🌐 Публичные чаты</h2><button class="lobby-close" id="closeLobbyBtn">✕</button></div>
+        <div class="lobby-list" id="lobbyList"><p class="lobby-empty">Поиск...</p></div>
+    </div>
+</div>
+
+<!-- ЛАЙТБОКС -->
+<div class="lightbox" id="lightbox">
+    <button class="lightbox-close">✕</button>
+    <img id="lbImg" src="" alt="Full view">
+    <button class="lightbox-download" id="lbDownload">💾 Скачать</button>
 </div>
 
 <script>
-    // ===== ПЕРЕМЕННЫЕ =====
+    // ===== ГЛОБАЛЬНЫЕ =====
     let client = null;
-    let myName = '';
-    let room = '';
-    let topic = '';
-
-    // Публичный MQTT-брокер (бесплатный, без регистрации)
+    let myName = '', room = '', topic = '', currentStorageKey = '';
+    let messageHistory = [];
+    let typingTimeout = null, isTyping = false, heartbeatInterval = null;
+    const MAX_HISTORY = 80; // Чуть меньше из-за картинок
     const BROKER = 'wss://broker.emqx.io:8084/mqtt';
 
+    // ===== ЛОББИ =====
+    let lobbyClient = null;
+    let activeRooms = new Map(), lobbyCleanupInterval = null;
+
     // ===== ЭЛЕМЕНТЫ =====
-    const loginScreen = document.getElementById('loginScreen');
-    const chatScreen  = document.getElementById('chatScreen');
-    const nameInput   = document.getElementById('nameInput');
-    const roomInput   = document.getElementById('roomInput');
-    const joinBtn     = document.getElementById('joinBtn');
-    const roomDisplay = document.getElementById('roomDisplay');
-    const statusDot   = document.getElementById('statusDot');
-    const statusText  = document.getElementById('statusText');
-    const messagesDiv = document.getElementById('messages');
-    const msgInput    = document.getElementById('msgInput');
-    const sendBtn     = document.getElementById('sendBtn');
-    const leaveBtn    = document.getElementById('leaveBtn');
+    const $ = id => document.getElementById(id);
+    const loginScreen=$('loginScreen'), chatScreen=$('chatScreen'), nameInput=$('nameInput'), roomInput=$('roomInput'), passInput=$('passInput');
+    const joinBtn=$('joinBtn'), roomDisplay=$('roomDisplay'), statusDot=$('statusDot'), statusText=$('statusText');
+    const messagesDiv=$('messages'), msgInput=$('msgInput'), sendBtn=$('sendBtn'), leaveBtn=$('leaveBtn'), typingIndicator=$('typingIndicator');
+    const fileInput=$('fileInput'), imgBtn=$('imgBtn');
+    const lobbyOverlay=$('lobbyOverlay'), lobbyList=$('lobbyList');
+    const lightbox=$('lightbox'), lbImg=$('lbImg'), lbDownload=$('lbDownload');
 
-    // ===== ВХОД В ЧАТ =====
-    joinBtn.addEventListener('click', joinChat);
-    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') roomInput.focus(); });
-    roomInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinChat(); });
+    // ===== НАВИГАЦИЯ =====
+    nameInput.onkeydown = e => { if(e.key==='Enter') roomInput.focus(); };
+    roomInput.onkeydown = e => { if(e.key==='Enter') passInput.focus(); };
+    passInput.onkeydown = e => { if(e.key==='Enter') joinChat(); };
+    joinBtn.onclick = joinChat;
 
+    // ===== ВХОД =====
     function joinChat() {
-        myName = nameInput.value.trim();
-        room   = roomInput.value.trim();
+        myName = nameInput.value.trim(); room = roomInput.value.trim();
+        const pass = passInput.value.trim();
+        if(!myName) { shake(nameInput); return; }
+        if(!room) { shake(roomInput); return; }
 
-        if (!myName) { shake(nameInput); return; }
-        if (!room)   { shake(roomInput);  return; }
+        const safeRoom = room.replace(/[^a-zA-Zа-яА-Я0-9_\-\s]/g, '_').toLowerCase().replace(/\s+/g, '_');
+        const passPart = pass ? '_'+pass.replace(/[^a-zA-Z0-9_]/g,'_') : '_public';
+        topic = `megachat/v1/${safeRoom}${passPart}`;
+        currentStorageKey = `megachat_hist_${topic.replace(/\//g,'_')}`;
+        loadHistory();
 
-        // Тема MQTT — уникальная для комнаты
-        topic = 'megachat/v1/' + room.toLowerCase().replace(/\s+/g, '_');
-
-        joinBtn.textContent = 'Подключение...';
-        joinBtn.disabled = true;
-
-        // Подключаемся к брокеру
-        client = mqtt.connect(BROKER, {
-            clientId: 'mc_' + Math.random().toString(36).substr(2, 9),
-            clean: true,
-            connectTimeout: 10000,
-            reconnectPeriod: 3000,
-        });
+        joinBtn.textContent = 'Подключение...'; joinBtn.disabled = true;
+        client = mqtt.connect(BROKER, { clientId: 'mc_'+Math.random().toString(36).substr(2,9), clean:true, connectTimeout:10000, reconnectPeriod:3000 });
 
         client.on('connect', () => {
-            client.subscribe(topic + '/#', err => {
-                if (err) {
-                    console.error('Ошибка подписки:', err);
-                    addSystemMessage('⚠️ Ошибка подписки на комнату');
-                }
-            });
-
-            // Переключаем экран
-            loginScreen.style.display = 'none';
-            chatScreen.style.display  = 'flex';
-            roomDisplay.textContent = '🗨 ' + room;
-            setStatus(true);
-
-            // Системное сообщение о входе
-            publish({ type: 'system', text: myName + ' присоединился к чату' });
+            client.subscribe(topic+'/#', err => { if(err) addSystemMessage('⚠️ Ошибка подписки'); });
+            loginScreen.style.display='none'; chatScreen.style.display='flex';
+            roomDisplay.textContent = '🗨 '+room; setStatus(true);
+            publish({type:'system', text:myName+' присоединился'});
             addSystemMessage('👋 Вы вошли в чат');
+            renderHistory();
+            if(!pass) startHeartbeat(room);
         });
 
-        client.on('message', (t, payload) => {
-            try {
-                const msg = JSON.parse(payload.toString());
-                handleIncoming(msg);
-            } catch(e) {}
-        });
+        client.on('message', (_, p) => { try{ handleIncoming(JSON.parse(p.toString())); }catch{} });
+        client.on('error', () => { joinBtn.textContent='Ошибка'; joinBtn.disabled=false; });
+        client.on('close', () => setStatus(false));
+        client.on('reconnect', () => { setStatus(false); statusText.textContent='Переподключение...'; });
+    }
 
-        client.on('error', () => {
-            joinBtn.textContent = 'Ошибка подключения';
-            joinBtn.disabled = false;
-        });
+    // ===== МАЯК =====
+    function startHeartbeat(r) { stopHeartbeat(); heartbeatInterval=setInterval(()=>{ if(client?.connected) client.publish('megachat/v1/lobby', JSON.stringify({room:r, ts:Date.now()}), {qos:0}); }, 8000); }
+    function stopHeartbeat() { clearInterval(heartbeatInterval); }
 
-        client.on('close', () => {
-            setStatus(false);
+    // ===== ИСТОРИЯ =====
+    function loadHistory() { try{ messageHistory = localStorage.getItem(currentStorageKey) ? JSON.parse(localStorage.getItem(currentStorageKey)) : []; } catch{ messageHistory=[]; } }
+    function saveHistory(msg) {
+        messageHistory.push(msg);
+        if(messageHistory.length > MAX_HISTORY) messageHistory.shift();
+        try { localStorage.setItem(currentStorageKey, JSON.stringify(messageHistory)); }
+        catch(e) { if(messageHistory.length>10){ messageHistory=messageHistory.slice(-50); localStorage.setItem(currentStorageKey, JSON.stringify(messageHistory)); } }
+    }
+    function renderHistory() {
+        messagesDiv.innerHTML='';
+        messageHistory.forEach(m => {
+            if(m.type==='chat') addMessage(m.sender, m.text, m.isImage, m.time, false, m.sender===myName?'mine':'other');
+            else if(m.type==='system') addSystemMessage(m.text, false);
         });
-
-        client.on('reconnect', () => {
-            setStatus(false);
-            statusText.textContent = 'Переподключение...';
-        });
+        scrollToBottom();
     }
 
     // ===== ОТПРАВКА =====
-    sendBtn.addEventListener('click', sendMessage);
-    msgInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    });
+    sendBtn.onclick = sendText;
+    msgInput.onkeydown = e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendText(); } };
+    msgInput.oninput = () => {
+        if(!client?.connected) return;
+        if(!isTyping){ publish({type:'typing', user:myName, isTyping:true}); isTyping=true; }
+        clearTimeout(typingTimeout);
+        typingTimeout=setTimeout(()=>{ publish({type:'typing', user:myName, isTyping:false}); isTyping=false; }, 2000);
+    };
 
-    function sendMessage() {
+    function sendText() {
         const text = msgInput.value.trim();
-        if (!text || !client || !client.connected) return;
+        if(!text || !client?.connected) return;
+        const m = {type:'chat', sender:myName, text, time:Date.now()};
+        publish(m); saveHistory(m); addMessage(myName, text, false, m.time, true, 'mine');
+        msgInput.value=''; msgInput.focus();
+        if(isTyping){ publish({type:'typing', user:myName, isTyping:false}); isTyping=false; }
+    }
 
-        publish({
-            type: 'chat',
-            sender: myName,
-            text: text,
-            time: Date.now()
+    // ===== ИЗОБРАЖЕНИЯ =====
+    imgBtn.onclick = () => fileInput.click();
+    fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if(!file || !client?.connected) return;
+        if(!file.type.startsWith('image/')) return alert('Только изображения!');
+
+        const base64 = await compressImage(file, 800, 0.7);
+        const m = {type:'chat', sender:myName, text:base64, isImage:true, time:Date.now()};
+        publish(m); saveHistory(m); addMessage(myName, base64, true, m.time, true, 'mine');
+        fileInput.value = '';
+    };
+
+    function compressImage(file, maxW, q) {
+        return new Promise(res => {
+            const r = new FileReader();
+            r.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const c = document.createElement('canvas');
+                    let w=img.width, h=img.height;
+                    if(w>maxW){ h*=maxW/w; w=maxW; }
+                    c.width=w; c.height=h;
+                    c.getContext('2d').drawImage(img,0,0,w,h);
+                    res(c.toDataURL('image/jpeg', q));
+                };
+                img.src = e.target.result;
+            };
+            r.readAsDataURL(file);
         });
-
-        // Показываем своё сообщение сразу
-        addMessage(myName, text, 'mine');
-        msgInput.value = '';
-        msgInput.focus();
     }
 
-    function publish(data) {
-        if (!client || !client.connected) return;
-        client.publish(topic + '/msg', JSON.stringify(data), { qos: 0 });
-    }
+    function publish(d) { if(client?.connected) client.publish(topic+'/msg', JSON.stringify(d), {qos:0}); }
 
     // ===== ПОЛУЧЕНИЕ =====
-    function handleIncoming(msg) {
-        if (msg.type === 'chat') {
-            if (msg.sender !== myName) {
-                addMessage(msg.sender, msg.text, 'other');
-            }
-        } else if (msg.type === 'system') {
-            addSystemMessage(msg.text);
-        }
+    function handleIncoming(m) {
+        if(m.type==='chat' && m.sender!==myName){ saveHistory(m); addMessage(m.sender, m.text, m.isImage, m.time, true, 'other'); }
+        else if(m.type==='system') addSystemMessage(m.text);
+        else if(m.type==='typing') typingIndicator.textContent = (m.isTyping && m.user!==myName) ? `${m.user} печатает...` : '';
     }
 
-    // ===== ОТОБРАЖЕНИЕ СООБЩЕНИЙ =====
-    function addMessage(sender, text, type) {
+    function addMessage(sender, content, isImg, time, scroll, cls) {
         const div = document.createElement('div');
-        div.className = 'message ' + type;
-
-        const timeStr = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
-
-        div.innerHTML = `
-            ${type !== 'mine' ? `<div class="sender">${escapeHtml(sender)}</div>` : ''}
-            <div class="text">${escapeHtml(text)}</div>
-            <div class="time">${timeStr}</div>
-        `;
-
-        messagesDiv.appendChild(div);
-        scrollToBottom();
-    }
-
-    function addSystemMessage(text) {
-        const div = document.createElement('div');
-        div.className = 'message system';
-        div.textContent = text;
-        messagesDiv.appendChild(div);
-        scrollToBottom();
-    }
-
-    function scrollToBottom() {
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    function escapeHtml(str) {
-        const d = document.createElement('div');
-        d.textContent = str;
-        return d.innerHTML;
-    }
-
-    // ===== СТАТУС =====
-    function setStatus(online) {
-        if (online) {
-            statusDot.className = 'status-dot';
-            statusText.textContent = 'Подключено';
+        div.className = 'message '+cls;
+        const t = new Date(time).toLocaleTimeString('ru', {hour:'2-digit', minute:'2-digit'});
+        let body = cls!=='mine' ? `<div class="sender">${esc(sender)}</div>` : '';
+        
+        if(isImg) {
+            body += `<img src="${content}" class="chat-img" loading="lazy" onclick="openLb(this.src)">`;
+            div.querySelector?.('.text')?.remove(); // fallback
         } else {
-            statusDot.className = 'status-dot offline';
-            statusText.textContent = 'Нет связи';
+            body += `<div class="text">${esc(content)}</div>`;
         }
+        
+        // Кнопки действий
+        if(cls==='mine' || isImg) {
+            body += `<div class="msg-actions">
+                ${isImg ? `<button class="act-btn" onclick="openLb('${content}')">🔍</button>` : ''}
+                <button class="act-btn" onclick="copyMsg(this, '${cls==='mine'&&!isImg?content:''}', ${isImg})">📋</button>
+            </div>`;
+        }
+        body += `<div class="time">${t}</div>`;
+        div.innerHTML = body;
+        messagesDiv.appendChild(div);
+        if(scroll) scrollToBottom();
+    }
+
+    function addSystemMessage(text, scroll=true) {
+        const d = document.createElement('div'); d.className='message system'; d.textContent=text;
+        messagesDiv.appendChild(d); if(scroll) scrollToBottom();
+    }
+
+    function scrollToBottom() { messagesDiv.scrollTop = messagesDiv.scrollHeight; }
+    function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+    function setStatus(on) { statusDot.className = on?'status-dot':'status-dot offline'; statusText.textContent = on?'Подключено':'Нет связи'; }
+
+    // ===== ДЕЙСТВИЯ С СООБЩЕНИЯМИ =====
+    window.openLb = src => { lbImg.src=src; lightbox.style.display='flex'; };
+    lightbox.onclick = e => { if(e.target===lightbox || e.target.classList.contains('lightbox-close')) lightbox.style.display='none'; };
+    lbDownload.onclick = () => {
+        const a = document.createElement('a'); a.href=lbImg.src; a.download='megachat_img_'+Date.now()+'.jpg'; a.click();
+    };
+    window.copyMsg = (btn, text, isImg) => {
+        if(isImg) {
+            // Копируем ссылку/base64 или скачиваем
+            const a = document.createElement('a'); a.href=btn.closest('.message').querySelector('.chat-img').src; a.download='img.jpg'; a.click();
+        } else {
+            navigator.clipboard.writeText(text).then(()=> addSystemMessage('📋 Скопировано'));
+        }
+    };
+
+    // ===== ЛОББИ =====
+    $('lobbyBtn').onclick = () => { lobbyOverlay.style.display='flex'; openLobby(); };
+    $('closeLobbyBtn').onclick = () => { lobbyOverlay.style.display='none'; closeLobby(); };
+
+    function openLobby() {
+        if(lobbyClient) return;
+        lobbyList.innerHTML = '<p class="lobby-empty">Подключение...</p>';
+        lobbyClient = mqtt.connect(BROKER, { clientId:'lobby_'+Math.random().toString(36).substr(2,9), clean:true, connectTimeout:5000 });
+        lobbyClient.on('connect', () => { lobbyClient.subscribe('megachat/v1/lobby'); lobbyList.innerHTML='<p class="lobby-empty">Ожидание маяков...</p>'; startLobbyClean(); });
+        lobbyClient.on('message', (_, p) => { try{ const d=JSON.parse(p.toString()); if(d.room && d.ts){ activeRooms.set(d.room, d.ts); renderLobby(); } }catch{} });
+        lobbyClient.on('error', () => { lobbyList.innerHTML='<p class="lobby-empty">⚠️ Ошибка лобби</p>'; });
+    }
+    function closeLobby() { if(lobbyClient){lobbyClient.end(true); lobbyClient=null;} stopLobbyClean(); activeRooms.clear(); }
+    function startLobbyClean() { clearInterval(lobbyCleanupInterval); lobbyCleanupInterval=setInterval(()=>{ const n=Date.now(); for(let [r,t] of activeRooms) if(n-t>20000) activeRooms.delete(r); renderLobby(); }, 5000); }
+    function stopLobbyClean() { clearInterval(lobbyCleanupInterval); }
+    function renderLobby() {
+        if(!activeRooms.size) { lobbyList.innerHTML='<p class="lobby-empty">Нет активных чатов<br><small>Войдите без пароля, чтобы появиться здесь</small></p>'; return; }
+        lobbyList.innerHTML='';
+        [...activeRooms.entries()].sort((a,b)=>b[1]-a[1]).forEach(([name]) => {
+            const d=document.createElement('div'); d.className='lobby-item';
+            d.innerHTML=`<span class="room-name">🗨 ${esc(name)}</span><span style="color:#4ade80; font-size:0.8em;">● Онлайн</span>`;
+            d.onclick = () => { roomInput.value=name; lobbyOverlay.style.display='none'; nameInput.focus(); };
+            lobbyList.appendChild(d);
+        });
     }
 
     // ===== ВЫХОД =====
-    leaveBtn.addEventListener('click', () => {
-        if (client && client.connected) {
-            publish({ type: 'system', text: myName + ' покинул чат' });
-        }
-        disconnect();
-        chatScreen.style.display  = 'none';
-        loginScreen.style.display = 'flex';
-        joinBtn.textContent = 'Войти в чат';
-        joinBtn.disabled = false;
-        messagesDiv.innerHTML = '';
-    });
-
-    function disconnect() {
-        if (client) {
-            client.end(true);
-            client = null;
-        }
-    }
-
-    function shake(el) {
-        el.style.animation = 'none';
-        el.offsetHeight;
-        el.style.animation = 'shake 0.4s';
-        el.style.borderColor = '#f87171';
-        setTimeout(() => { el.style.borderColor = ''; el.style.animation = ''; }, 600);
-    }
-
-    // CSS-анимация тряски
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-8px); }
-            40% { transform: translateX(8px); }
-            60% { transform: translateX(-5px); }
-            80% { transform: translateX(5px); }
-        }
-    `;
-    document.head.appendChild(style);
+    leaveBtn.onclick = () => {
+        if(client?.connected) publish({type:'system', text:myName+' покинул чат'});
+        disconnect(); chatScreen.style.display='none'; loginScreen.style.display='flex';
+        joinBtn.textContent='Войти'; joinBtn.disabled=false; messagesDiv.innerHTML=''; typingIndicator.textContent='';
+        messageHistory=[]; isTyping=false; stopHeartbeat();
+    };
+    function disconnect() { if(client){client.end(true); client=null;} }
+    function shake(el) { el.style.animation='none'; el.offsetHeight; el.style.animation='shake 0.4s'; el.style.borderColor='#f87171'; setTimeout(()=>{el.style.borderColor=''; el.style.animation='';}, 600); }
+    document.head.appendChild(Object.assign(document.createElement('style'), {textContent:`@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}`}));
 </script>
 
 </body>
