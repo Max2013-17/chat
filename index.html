@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌐 МегаЧат — общение на любом расстоянии</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            height: 95vh;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ===== Экран входа ===== */
+        .login-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 30px;
+            gap: 20px;
+        }
+
+        .login-screen h1 {
+            font-size: 2em;
+            text-align: center;
+            background: linear-gradient(90deg, #00d2ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-screen p {
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .login-screen input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .login-screen input:focus {
+            border-color: #7b2ff7;
+        }
+
+        .login-screen input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d2ff, #7b2ff7);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(123, 47, 247, 0.4);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 6px 30px rgba(123, 47, 247, 0.6);
+        }
+
+        /* ===== Экран чата ===== */
+        .chat-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header .room-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header .room-name {
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .chat-header .status {
+            font-size: 0.75em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 3px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.offline {
+            background: #f87171;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn-leave {
+            background: rgba(248, 113, 113, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .btn-leave:hover {
+            background: rgba(248, 113, 113, 0.35);
+        }
+
+        /* Сообщения */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            animation: fadeIn 0.3s ease;
+            line-height: 1.45;
+            word-wrap: break-word;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.mine {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #7b2ff7, #5b1fd4);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.other {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.1);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message .sender {
+            font-size: 0.75em;
+            font-weight: 700;
+            color: #a78bfa;
+            margin-bottom: 3px;
+        }
+
+        .message.mine .sender {
+            color: #c4b5fd;
+        }
+
+        .message .text {
+            font-size: 0.95em;
+        }
+
+        .message .time {
+            font-size: 0.65em;
+            color: rgba(255,255,255,0.4);
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message.system {
+            align-self: center;
+            background: transparent;
+            color: rgba(255,255,255,0.35);
+            font-size: 0.8em;
+            text-align: center;
+            max-width: 100%;
+            padding: 4px 10px;
+        }
+
+        /* Поле ввода */
+        .input-area {
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.07);
+            color: #fff;
+            font-size: 0.95em;
+            outline: none;
+            transition: border 0.3s;
+        }
+
+        .input-area input:focus {
+            border-color: #7b2ff7;
+        }
+
+        .input-area input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .btn-send {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #7b2ff7, #00d2ff);
+            color: #fff;
+            font-size: 1.3em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.3s;
+            box-shadow: 0 4px 15px rgba(123, 47, 247, 0.3);
+        }
+
+        .btn-send:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-send:active {
+            transform: scale(0.95);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 520px) {
+            body {
+                align-items: stretch;
+            }
+            .container {
+                max-width: 100%;
+                height: 100vh;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- ЭКРАН ВХОДА -->
+    <div class="login-screen" id="loginScreen">
+        <h1>🌐 МегаЧат</h1>
+        <p>Общайтесь с кем угодно<br>из любой точки мира!</p>
+
+        <input type="text" id="nameInput" placeholder="Ваше имя" maxlength="20" autocomplete="off">
+        <input type="text" id="roomInput" placeholder="Название комнаты" maxlength="30" autocomplete="off">
+        <p style="font-size:0.75em; color:rgba(255,255,255,0.3);">
+            💡 Придумайте уникальное название комнаты и поделитесь им с собеседником
+        </p>
+        <button class="btn btn-primary" id="joinBtn">Войти в чат</button>
+    </div>
+
+    <!-- ЭКРАН ЧАТА -->
+    <div class="chat-screen" id="chatScreen">
+        <div class="chat-header">
+            <div class="room-info">
+                <span class="room-name" id="roomDisplay">Комната</span>
+                <span class="status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Подключено</span>
+                </span>
+            </div>
+            <button class="btn-leave" id="leaveBtn">Выйти</button>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Напишите сообщение..." maxlength="500" autocomplete="off">
+            <button class="btn-send" id="sendBtn">➤</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ===== ПЕРЕМЕННЫЕ =====
+    let client = null;
+    let myName = '';
+    let room = '';
+    let topic = '';
+
+    // Публичный MQTT-брокер (бесплатный, без регистрации)
+    const BROKER = 'wss://broker.emqx.io:8084/mqtt';
+
+    // ===== ЭЛЕМЕНТЫ =====
+    const loginScreen = document.getElementById('loginScreen');
+    const chatScreen  = document.getElementById('chatScreen');
+    const nameInput   = document.getElementById('nameInput');
+    const roomInput   = document.getElementById('roomInput');
+    const joinBtn     = document.getElementById('joinBtn');
+    const roomDisplay = document.getElementById('roomDisplay');
+    const statusDot   = document.getElementById('statusDot');
+    const statusText  = document.getElementById('statusText');
+    const messagesDiv = document.getElementById('messages');
+    const msgInput    = document.getElementById('msgInput');
+    const sendBtn     = document.getElementById('sendBtn');
+    const leaveBtn    = document.getElementById('leaveBtn');
+
+    // ===== ВХОД В ЧАТ =====
+    joinBtn.addEventListener('click', joinChat);
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') roomInput.focus(); });
+    roomInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinChat(); });
+
+    function joinChat() {
+        myName = nameInput.value.trim();
+        room   = roomInput.value.trim();
+
+        if (!myName) { shake(nameInput); return; }
+        if (!room)   { shake(roomInput);  return; }
+
+        // Тема MQTT — уникальная для комнаты
+        topic = 'megachat/v1/' + room.toLowerCase().replace(/\s+/g, '_');
+
+        joinBtn.textContent = 'Подключение...';
+        joinBtn.disabled = true;
+
+        // Подключаемся к брокеру
+        client = mqtt.connect(BROKER, {
+            clientId: 'mc_' + Math.random().toString(36).substr(2, 9),
+            clean: true,
+            connectTimeout: 10000,
+            reconnectPeriod: 3000,
+        });
+
+        client.on('connect', () => {
+            client.subscribe(topic + '/#', err => {
+                if (err) {
+                    console.error('Ошибка подписки:', err);
+                    addSystemMessage('⚠️ Ошибка подписки на комнату');
+                }
+            });
+
+            // Переключаем экран
+            loginScreen.style.display = 'none';
+            chatScreen.style.display  = 'flex';
+            roomDisplay.textContent = '🗨 ' + room;
+            setStatus(true);
+
+            // Системное сообщение о входе
+            publish({ type: 'system', text: myName + ' присоединился к чату' });
+            addSystemMessage('👋 Вы вошли в чат');
+        });
+
+        client.on('message', (t, payload) => {
+            try {
+                const msg = JSON.parse(payload.toString());
+                handleIncoming(msg);
+            } catch(e) {}
+        });
+
+        client.on('error', () => {
+            joinBtn.textContent = 'Ошибка подключения';
+            joinBtn.disabled = false;
+        });
+
+        client.on('close', () => {
+            setStatus(false);
+        });
+
+        client.on('reconnect', () => {
+            setStatus(false);
+            statusText.textContent = 'Переподключение...';
+        });
+    }
+
+    // ===== ОТПРАВКА =====
+    sendBtn.addEventListener('click', sendMessage);
+    msgInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const text = msgInput.value.trim();
+        if (!text || !client || !client.connected) return;
+
+        publish({
+            type: 'chat',
+            sender: myName,
+            text: text,
+            time: Date.now()
+        });
+
+        // Показываем своё сообщение сразу
+        addMessage(myName, text, 'mine');
+        msgInput.value = '';
+        msgInput.focus();
+    }
+
+    function publish(data) {
+        if (!client || !client.connected) return;
+        client.publish(topic + '/msg', JSON.stringify(data), { qos: 0 });
+    }
+
+    // ===== ПОЛУЧЕНИЕ =====
+    function handleIncoming(msg) {
+        if (msg.type === 'chat') {
+            if (msg.sender !== myName) {
+                addMessage(msg.sender, msg.text, 'other');
+            }
+        } else if (msg.type === 'system') {
+            addSystemMessage(msg.text);
+        }
+    }
+
+    // ===== ОТОБРАЖЕНИЕ СООБЩЕНИЙ =====
+    function addMessage(sender, text, type) {
+        const div = document.createElement('div');
+        div.className = 'message ' + type;
+
+        const timeStr = new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' });
+
+        div.innerHTML = `
+            ${type !== 'mine' ? `<div class="sender">${escapeHtml(sender)}</div>` : ''}
+            <div class="text">${escapeHtml(text)}</div>
+            <div class="time">${timeStr}</div>
+        `;
+
+        messagesDiv.appendChild(div);
+        scrollToBottom();
+    }
+
+    function addSystemMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'message system';
+        div.textContent = text;
+        messagesDiv.appendChild(div);
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    // ===== СТАТУС =====
+    function setStatus(online) {
+        if (online) {
+            statusDot.className = 'status-dot';
+            statusText.textContent = 'Подключено';
+        } else {
+            statusDot.className = 'status-dot offline';
+            statusText.textContent = 'Нет связи';
+        }
+    }
+
+    // ===== ВЫХОД =====
+    leaveBtn.addEventListener('click', () => {
+        if (client && client.connected) {
+            publish({ type: 'system', text: myName + ' покинул чат' });
+        }
+        disconnect();
+        chatScreen.style.display  = 'none';
+        loginScreen.style.display = 'flex';
+        joinBtn.textContent = 'Войти в чат';
+        joinBtn.disabled = false;
+        messagesDiv.innerHTML = '';
+    });
+
+    function disconnect() {
+        if (client) {
+            client.end(true);
+            client = null;
+        }
+    }
+
+    function shake(el) {
+        el.style.animation = 'none';
+        el.offsetHeight;
+        el.style.animation = 'shake 0.4s';
+        el.style.borderColor = '#f87171';
+        setTimeout(() => { el.style.borderColor = ''; el.style.animation = ''; }, 600);
+    }
+
+    // CSS-анимация тряски
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+    `;
+    document.head.appendChild(style);
+</script>
+
+</body>
+</html>
